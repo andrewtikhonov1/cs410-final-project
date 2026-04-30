@@ -11,7 +11,7 @@ docker-compose up -d
 ```
 
 ### 3. Initialize & Ingest
-```python
+```bash
 python setup_database.py
 python postgres_ingest.py
 python es_sync.py
