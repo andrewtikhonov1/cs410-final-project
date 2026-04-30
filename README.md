@@ -1,23 +1,46 @@
-1. Install Dependencies
+```markdown
+## Project Setup & Execution
+
+### 1. Install Dependencies
+```bash
 pip install psycopg2-binary elasticsearch==8.13.0 datasets tqdm
+```
 
-2. Launch Infrastructure
+### 2. Launch Infrastructure
+```bash
 docker-compose up -d
+```
 
-3. Initialize & Ingest
+### 3. Initialize & Ingest
+```bash
 python setup_database.py
 python postgres_ingest.py
 python es_sync.py
+```
 
-4. Verify Counts/Success
-Postgres count:
+### 4. Verify Counts/Success
+
+**Postgres count:**
+```bash
 docker-compose exec postgres psql -U user -d wikidb -c "SELECT COUNT(*) FROM articles;"
+```
 
-Elasticsearch count:
+**Elasticsearch count:**
+```bash
 curl -X GET "localhost:9200/_cat/indices/wikipedia_articles?v&h=docs.count"
+```
 
 ---
 
-Checking size:
+### Storage Monitoring
+
+**Postgres Database Size:**
+```bash
 docker-compose exec postgres psql -U user -d wikidb -c "SELECT pg_size_pretty(pg_database_size('wikidb'));"
+```
+
+**Elasticsearch Index Size:**
+```bash
 curl -X GET "localhost:9200/_cat/indices/wikipedia_articles?v&h=dataset.size"
+```
+```
