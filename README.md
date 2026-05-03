@@ -2,7 +2,7 @@
 
 ### 1. Install Dependencies
 ```bash
-pip install psycopg2-binary elasticsearch==8.13.0 datasets tqdm
+pip install -r requirements.txt
 ```
 
 ### 2. Launch Infrastructure
@@ -12,9 +12,9 @@ docker-compose up -d
 
 ### 3. Initialize & Ingest
 ```bash
-python setup_database.py
-python postgres_ingest.py
-python es_sync.py
+python setup/setup_database.py
+python setup/postgres_ingest.py
+python setup/es_sync.py
 ```
 
 ### 4. Verify Counts/Success
@@ -43,31 +43,40 @@ docker-compose exec postgres psql -U user -d wikidb -c "SELECT pg_size_pretty(pg
 curl -X GET "localhost:9200/_cat/indices/wikipedia_articles?v&h=dataset.size"
 ```
 
-Running the Frontend
+## Running the Frontend
 
 ### 5. Start the Flask API
 ```bash
-python app.py
+python app/app.py
 ```
 
 ### 6. Open the Frontend
+Mac
 ```bash
-open index.html
+open app/index.html
 ```
-The status dot in the top-right corner turns green when Flask can reach both databases.
-# Windows
-start index.html
 
-# Linux
-xdg-open index.html
+Windows
+```bash
+start app/index.html
+```
+
+Linux
+```bash
+xdg-open app/index.html
+```
+
 The status dot in the top-right corner of the app turns green when Flask can reach both databases. You can now search articles and view recommendations.
 
-Stopping & Resuming
+### Stopping & Resuming
 To stop:
-bash# CTRL+C in the terminal running app.py, then:
-docker-compose down
-To resume after a restart (data is already ingested, no need to re-run steps 3–4):
-bashdocker-compose up -d
-python app.py
-Then open index.html.
+```CTRL+C``` in the terminal running app.py, then ```docker-compose down```.
 
+To resume after a restart (data is already ingested, no need to re-run steps 3–4):
+
+```bash
+docker-compose up -d
+python app/app.py
+```
+
+Then open the frontend (step 6).

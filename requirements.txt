@@ -1,0 +1,10 @@
+Flask
+Flask-CORS
+psycopg2-binary
+elasticsearch==8.13.0
+requests
+wikipedia
+pandas
+scikit-learn
+datasets
+tqdm

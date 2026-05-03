@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>WikiRec — Article Discovery</title>
+<title>WikiRec | Article Discovery</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<link rel="icon" type="image/x-icon" href="favicon.png">
 <style>
   /* ── Reset & Variables ─────────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -214,8 +215,38 @@
     font-size: .92rem;
     line-height: 1.8;
     color: #3d3a32;
-    white-space: pre-wrap;
+    /* white-space: pre-wrap; */
     word-wrap: break-word;
+  }
+  .article-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+  }
+  .article-body th, .article-body td {
+    border: 1px solid var(--border);
+    padding: 8px;
+    text-align: left;
+  }
+  .article-body th {
+    background: var(--surface2);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+  }
+  .article-body a {
+    color: inherit !important;
+    text-decoration: none !important;
+    pointer-events: none !important;
+    cursor: default !important;
+  }
+  .article-body img, 
+  .article-body .thumb, 
+  .article-body .infobox-image,
+  .article-body .mw-file-description,
+  .article-body figure {
+      display: none !important;
   }
   .article-truncated {
     margin-top: 1rem;
@@ -416,7 +447,7 @@
         <div class="article-inner">
           <div class="article-eyebrow" id="artEyebrow">Wikipedia</div>
           <h1 class="article-title" id="artTitle"></h1>
-          <pre class="article-body" id="artBody"></pre>
+          <div class="article-body" id="artBody"></div>
           <div class="article-truncated" id="artTruncNote" style="display:none">
             ✂ Showing first 6,000 characters. Open on Wikipedia for the full article.
           </div>
@@ -435,7 +466,7 @@
       </div>
       <div class="panel-body" id="recList">
         <div class="empty-state">
-          <div class="empty-icon">✦</div>
+          <div class="empty-icon">⟡</div>
           <div class="empty-label">Open an article to see<br/>similar recommendations</div>
         </div>
       </div>
@@ -561,7 +592,7 @@
  
       document.getElementById('artEyebrow').textContent = `Article #${art.id}`;
       document.getElementById('artTitle').textContent = art.title;
-      document.getElementById('artBody').textContent = art.text;
+      document.getElementById('artBody').innerHTML = art.html;
       document.getElementById('artTruncNote').style.display = art.truncated ? 'block' : 'none';
       const link = document.getElementById('artLink');
       if (art.url) { link.href = art.url; link.style.display = 'inline-flex'; }

@@ -4,6 +4,8 @@ import psycopg2
 import psycopg2.extras
 from elasticsearch import Elasticsearch
 import os
+import requests
+import re
  
 app = Flask(__name__)
 CORS(app)
@@ -83,33 +85,91 @@ def search():
         for h in resp["hits"]["hits"]
     ]
     return jsonify({"results": hits, "total": resp["hits"]["total"]["value"]})
- 
- 
+
 @app.route("/api/article/<int:article_id>")
 def get_article(article_id):
-    """Fetch full article from PostgreSQL using article_id."""
-    conn = get_pg()
-    cur = conn.cursor()
-    cur.execute(
-        "SELECT article_id, title, url, raw_content FROM articles WHERE article_id = %s",
-        (article_id,)
-    )
-    row = cur.fetchone()
-    cur.close()
-    conn.close()
- 
-    if not row:
-        return jsonify({"error": "article not found"}), 404
- 
-    text = row["raw_content"] or ""
-    PREVIEW_LEN = 6000
+    """Fetch full article from Wikipedia using article_id with Postgres store as a fallback."""
+    es = get_es()
+    
+    # Retrieve title from Elasticsearch
+    try:
+        es_resp = es.get(index=ES_INDEX, id=str(article_id))
+        title = es_resp["_source"].get("title")
+    except Exception:
+        return jsonify({"error": "Article ID not found"}), 404
+
+    # Try to fetch the prettified content using Wikipedia API
+    wiki_action_url = "https://en.wikipedia.org/w/api.php"
+    params = {
+        "action": "parse",
+        "page": title,
+        "format": "json",
+        "prop": "text|categories",
+        "redirects": "1",
+        "disableeditsection": "1"
+    }
+    
+    headers = {
+        'User-Agent': 'WikiRecDiscoveryApp/1.0 (https://github.com/andrewtikhonov1/cs410-final-project)'
+    }
+
+    use_fallback = False
+    html_content = ""
+    source = "wikipedia_parse_api"
+
+    try:
+        resp = requests.get(wiki_action_url, params=params, headers=headers, timeout=10)
+        
+        if resp.status_code == 200:
+            data = resp.json()
+            if "error" not in data:
+                # Disambiguation edge case check
+                categories = data.get("parse", {}).get("categories", [])
+                is_disambig = any("disambiguation" in c.get("*", "").lower() for c in categories)
+
+                if is_disambig:
+                    use_fallback = True
+                else:
+                    html_content = data.get("parse", {}).get("text", {}).get("*", "No content found.")
+            else:
+                use_fallback = True
+        else:
+            use_fallback = True
+            
+    except (requests.RequestException, ValueError):
+        use_fallback = True
+
+    # PostgreSQL Fallback
+    if use_fallback:
+        source = "local_db_fallback"
+        try:
+            conn = get_pg()
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT raw_content FROM articles WHERE article_id = %s",
+                (article_id,)
+            )
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            if row and row["raw_content"]:
+                html_content = f"<div class='fallback-content'>{row['raw_content']}</div>"
+            else:
+                html_content = "<p>Error: Article content could not be retrieved.</p>"
+        except Exception as e:
+            html_content = f"<p>Local Retrieval Error: {str(e)}</p>"
+
+    # # Remove images and figure tags
+    if html_content and source == "wikipedia_parse_api":
+        html_content = re.sub(r'<img\b[^>]*>', '', html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'<figure\b[^>]*>.*?</figure>', '', html_content, flags=re.IGNORECASE | re.DOTALL)
+
     return jsonify({
-        "id": row["article_id"],
-        "title": row["title"],
-        "url": row["url"],
-        "text": text[:PREVIEW_LEN],
-        "truncated": len(text) > PREVIEW_LEN,
-        "full_length": len(text),
+        "id": article_id,
+        "title": title,
+        "html": html_content,
+        "source": source
     })
  
  
@@ -191,6 +251,7 @@ def random_article():
  
 @app.route("/api/health")
 def health():
+    """Status check for database connections."""
     checks = {}
  
     try:

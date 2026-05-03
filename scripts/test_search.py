@@ -1,6 +1,5 @@
 import psycopg2
 from elasticsearch import Elasticsearch
-import json
 
 # Suggests an article based on a query and then recommends similar articles. To be expanded.
 def test_pipeline(query_text="programming language"):
@@ -67,4 +66,4 @@ def test_pipeline(query_text="programming language"):
     pg_conn.close()
 
 if __name__ == "__main__":
-    test_pipeline("Michigan Wolverines")
+    test_pipeline("Fighting Illini")
