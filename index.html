@@ -451,6 +451,7 @@
   const API = 'http://localhost:5050/api';
  
   let currentArticleId = null;
+  let currentRecommendationRequest = 0;
  
   // Utility 
   function toast(msg) {
@@ -540,6 +541,9 @@
     document.getElementById('articleWelcome').style.display = 'none';
     document.getElementById('articleContent').style.display = 'none';
     const panel = document.getElementById('articlePanel');
+    
+    // Clear recommendations panel while loading
+    document.getElementById('recList').innerHTML = skeletonRows(5);
  
     const placeholder = document.createElement('div');
     placeholder.className = 'article-inner';
@@ -566,8 +570,8 @@
       document.getElementById('articleContent').style.display = 'block';
       panel.scrollTop = 0;
  
-      // Load recommendations
-      loadRecommendations(id);
+      // Load recommendations and wait for them
+      await loadRecommendations(id);
     } catch (e) {
       placeholder.remove();
       toast('Failed to load article: ' + e.message);
@@ -578,12 +582,22 @@
   async function loadRecommendations(id) {
     const list = document.getElementById('recList');
     list.innerHTML = skeletonRows(5);
+    
+    // Track this request to prevent stale results from overwriting fresh ones
+    const requestId = ++currentRecommendationRequest;
  
     try {
       const data = await apiFetch(`/recommend/${id}`);
-      renderRecs(data.recommendations);
+      
+      // Only render if this is still the latest request
+      if (requestId === currentRecommendationRequest) {
+        renderRecs(data.recommendations);
+      }
     } catch (e) {
-      list.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠</div><div class="empty-label">${e.message}</div></div>`;
+      // Only show error if this is still the latest request
+      if (requestId === currentRecommendationRequest) {
+        list.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠</div><div class="empty-label">${e.message}</div></div>`;
+      }
     }
   }
  
@@ -615,7 +629,7 @@
   async function loadRandom() {
     try {
       const r = await apiFetch('/random');
-      loadArticle(r.id);
+      await loadArticle(r.id);
     } catch (e) {
       toast('Random failed: ' + e.message);
     }

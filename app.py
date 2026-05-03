@@ -43,10 +43,32 @@ def search():
         index=ES_INDEX,
         size=size,
         query={
-            "multi_match": {
-                "query": q,
-                "fields": ["title^3", "content"],
-                "type": "best_fields",
+            "bool": {
+                "should": [
+                    {
+                        "multi_match": {
+                            "query": q,
+                            "fields": ["title^3", "content"],
+                            "type": "best_fields"
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "title": {
+                                "query": q,
+                                "boost": 5
+                            }
+                        }
+                    },
+                    {
+                        "term": {
+                            "title.keyword": {
+                                "value": q,
+                                "boost": 10
+                            }
+                        }
+                    }
+                ]
             }
         },
         _source=True,
