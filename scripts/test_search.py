@@ -1,9 +1,9 @@
 import psycopg2
 from elasticsearch import Elasticsearch
 
-# Suggests an article based on a query and then recommends similar articles. To be expanded.
+# Suggests an article based on a query and then recommends similar articles
 def test_pipeline(query_text="programming language"):
-    print(f"--- Testing Pipeline for: '{query_text}' ---")
+    print(f"Testing Pipeline for: '{query_text}'")
     
     es = Elasticsearch("http://localhost:9200")
     pg_conn = psycopg2.connect(dbname="wikidb", user="user", password="password", host="127.0.0.1", port="5433")
@@ -30,10 +30,9 @@ def test_pipeline(query_text="programming language"):
     print(f"Found top match: ID {top_id} - '{top_title}'")
 
     # Fetch full text from Postgres
-    print("\n2. Fetching Full Text from Postgres Vault...")
+    print("\nFetching full text from Postgres store...")
     pg_cur.execute("SELECT raw_content FROM articles WHERE article_id = %s;", (top_id,))
     content = pg_cur.fetchone()
-    
     if content:
         print(f"Successfully retrieved {len(content[0])} characters from Postgres.")
         print(f"Snippet: {content[0][:100]}...")
@@ -41,7 +40,7 @@ def test_pipeline(query_text="programming language"):
         print("ID found in ES but missing in Postgres! Sync is broken.")
 
     # Test similarity
-    print(f"\n3. Finding articles similar to '{top_title}'...")
+    print(f"\nFinding articles similar to '{top_title}'...")
     mlt_query = {
         "query": {
             "more_like_this": {
@@ -60,7 +59,7 @@ def test_pipeline(query_text="programming language"):
         for s_hit in sim_hits:
             print(f"   - {s_hit['_source']['title']} (Score: {s_hit['_score']:.2f})")
     else:
-        print("No similar articles found. Check if 'term_vector' is enabled.")
+        print("No similar articles found.")
 
     pg_cur.close()
     pg_conn.close()

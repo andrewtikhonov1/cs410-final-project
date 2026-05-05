@@ -6,9 +6,11 @@ from elasticsearch import Elasticsearch
 import os
 import requests
 import re
+from sentence_transformers import SentenceTransformer
  
 app = Flask(__name__)
 CORS(app)
+MODEL = SentenceTransformer('all-MiniLM-L6-v2')
  
 # ── Config ─────────────────────────────────────────────────────────────────────
 PG_DSN = os.getenv(
@@ -41,6 +43,8 @@ def search():
         return jsonify({"error": "q is required"}), 400
  
     es = get_es()
+
+    # Request closest matching articles based on a given query/keywords
     resp = es.search(
         index=ES_INDEX,
         size=size,
@@ -76,6 +80,7 @@ def search():
         _source=True,
     )
  
+    # Parse the results from the ES response
     hits = [
         {
             "id": int(h["_id"]),
@@ -108,25 +113,22 @@ def get_article(article_id):
         "redirects": "1",
         "disableeditsection": "1"
     }
-    
     headers = {
         'User-Agent': 'WikiRecDiscoveryApp/1.0 (https://github.com/andrewtikhonov1/cs410-final-project)'
     }
-
     use_fallback = False
     html_content = ""
     source = "wikipedia_parse_api"
 
+    # Decide whether the fallback should be used or not
     try:
         resp = requests.get(wiki_action_url, params=params, headers=headers, timeout=10)
-        
         if resp.status_code == 200:
             data = resp.json()
             if "error" not in data:
                 # Disambiguation edge case check
                 categories = data.get("parse", {}).get("categories", [])
                 is_disambig = any("disambiguation" in c.get("*", "").lower() for c in categories)
-
                 if is_disambig:
                     use_fallback = True
                 else:
@@ -139,10 +141,11 @@ def get_article(article_id):
     except (requests.RequestException, ValueError):
         use_fallback = True
 
-    # PostgreSQL Fallback
+    # PostgreSQL fallback if necessary
     if use_fallback:
         source = "local_db_fallback"
         try:
+            # Fetch the raw article content from local DB
             conn = get_pg()
             cur = conn.cursor()
             cur.execute(
@@ -160,7 +163,7 @@ def get_article(article_id):
         except Exception as e:
             html_content = f"<p>Local Retrieval Error: {str(e)}</p>"
 
-    # # Remove images and figure tags
+    # Remove images and figure tags
     if html_content and source == "wikipedia_parse_api":
         html_content = re.sub(r'<img\b[^>]*>', '', html_content, flags=re.IGNORECASE)
         html_content = re.sub(r'<figure\b[^>]*>.*?</figure>', '', html_content, flags=re.IGNORECASE | re.DOTALL)
@@ -181,19 +184,19 @@ def recommend(article_id):
     """
     size = int(request.args.get("size", 6))
  
+    # Initial title check
     conn = get_pg()
     cur = conn.cursor()
     cur.execute("SELECT title FROM articles WHERE article_id = %s", (article_id,))
     row = cur.fetchone()
     cur.close()
     conn.close()
- 
     if not row:
         return jsonify({"error": "article not found"}), 404
  
+    # Attempt the full ES search based on both title and content with a MTL query
     source_title = row["title"]
     es = get_es()
- 
     try:
         resp = es.search(
             index=ES_INDEX,
@@ -209,8 +212,8 @@ def recommend(article_id):
             },
             _source=True,
         )
+    # Fallback uses BM25 on title words
     except Exception:
-        # Fallback: BM25 on title words
         resp = es.search(
             index=ES_INDEX,
             size=size + 1,
@@ -218,6 +221,7 @@ def recommend(article_id):
             _source=True,
         )
  
+    # Parse the response and return the top recommended articles by similarity score
     recs = [
         {
             "id": int(h["_id"]),
@@ -227,7 +231,7 @@ def recommend(article_id):
         for h in resp["hits"]["hits"]
         if int(h["_id"]) != article_id
     ][:size]
- 
+
     return jsonify({
         "article_id": article_id,
         "source_title": source_title,
@@ -254,6 +258,7 @@ def health():
     """Status check for database connections."""
     checks = {}
  
+    # Postgres confirmation
     try:
         conn = get_pg()
         cur = conn.cursor()
@@ -265,6 +270,7 @@ def health():
     except Exception as e:
         checks["postgres"] = f"error: {e}"
  
+    # ES confirmation
     try:
         es = get_es()
         if es.ping():

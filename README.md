@@ -12,33 +12,32 @@ docker-compose up -d
 
 ### 3. Initialize & Ingest
 ```bash
-python setup/setup_database.py
 python setup/postgres_ingest.py
 python setup/es_sync.py
 ```
 
 ### 4. Verify Counts/Success
 
-**Postgres count:**
+#### Postgres count:
 ```bash
 docker-compose exec postgres psql -U user -d wikidb -c "SELECT COUNT(*) FROM articles;"
 ```
 
-**Elasticsearch count:**
+#### Elasticsearch count:
 ```bash
 curl -X GET "localhost:9200/_cat/indices/wikipedia_articles?v&h=docs.count"
 ```
 
 ---
 
-### Storage Monitoring
+**Storage Monitoring (Optional)**
 
-**Postgres Database Size:**
+#### Postgres Database Size:
 ```bash
 docker-compose exec postgres psql -U user -d wikidb -c "SELECT pg_size_pretty(pg_database_size('wikidb'));"
 ```
 
-**Elasticsearch Index Size:**
+#### Elasticsearch Index Size:
 ```bash
 curl -X GET "localhost:9200/_cat/indices/wikipedia_articles?v&h=dataset.size"
 ```
@@ -68,7 +67,7 @@ xdg-open app/index.html
 
 The status dot in the top-right corner of the app turns green when Flask can reach both databases. You can now search articles and view recommendations.
 
-### Stopping & Resuming
+## Stopping & Resuming
 To stop:
 ```CTRL+C``` in the terminal running app.py, then ```docker-compose down```.
 
