@@ -6,11 +6,9 @@ from elasticsearch import Elasticsearch
 import os
 import requests
 import re
-from sentence_transformers import SentenceTransformer
  
 app = Flask(__name__)
 CORS(app)
-MODEL = SentenceTransformer('all-MiniLM-L6-v2')
  
 # ── Config ─────────────────────────────────────────────────────────────────────
 PG_DSN = os.getenv(

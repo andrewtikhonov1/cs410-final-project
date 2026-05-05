@@ -35,7 +35,7 @@ def sync_pg_to_index():
     pg_cur = pg_conn.cursor(name="es_sync_cursor", cursor_factory=DictCursor)
     pg_cur.execute("SELECT article_id, title, raw_content FROM articles;")
     print("Syncing records...")
-    with tqdm(desc="Vault -> Index", unit="art") as pbar:
+    with tqdm(desc="Postgres -> ES", unit="articles") as pbar:
         while True:
             # Get the entire batch
             rows = pg_cur.fetchmany(BATCH_SIZE)
